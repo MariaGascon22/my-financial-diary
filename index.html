@@ -155,6 +155,46 @@
   }
 })();
 </script>
+<style>
+.upd-bar{position:fixed;top:0;left:0;right:0;z-index:1100;display:flex;align-items:center;justify-content:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 8px 10px 16px;background:var(--m-deep,#5B2333);color:#fff;font:500 14px var(--font-body,sans-serif);box-shadow:0 10px 24px -14px rgba(74,37,48,.7);animation:updIn .4s ease both}
+.upd-bar span{min-width:0}
+.upd-bar button{flex:none;border:0;border-radius:999px;padding:7px 16px;background:#fff;color:var(--m-deep,#5B2333);font:700 13px var(--font-body,sans-serif);cursor:pointer}
+.upd-bar .upd-x{background:transparent;color:#fff;padding:4px 8px;font-size:18px;line-height:1;opacity:.8}
+@keyframes updIn{from{transform:translateY(-100%)}to{transform:none}}
+</style>
+<script>
+/* Aviso de nueva versión: revisa si index.html cambió en el servidor (ETag / Last-Modified, con una petición
+   HEAD que no descarga la app) y muestra arriba una barra con el botón "Actualizar". */
+(function () {
+  var url = new URL('index.html', location.href).href, base = null, last = 0, shown = false;
+  function check() {
+    if (shown || !navigator.onLine || Date.now() - last < 60000) return;
+    last = Date.now();
+    fetch(url, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      var tag = r.ok && (r.headers.get('etag') || r.headers.get('last-modified'));
+      if (!tag) return;
+      if (base === null) base = tag;
+      else if (tag !== base) show();
+    }).catch(function () {});
+  }
+  function show() {
+    shown = true;
+    var bar = document.createElement('div'), txt = document.createElement('span'), btn = document.createElement('button'), x = document.createElement('button');
+    bar.className = 'upd-bar'; bar.setAttribute('role', 'status');
+    txt.textContent = 'Hay una nueva versión disponible';
+    btn.type = 'button'; btn.textContent = 'Actualizar';
+    btn.onclick = function () { location.reload(); };
+    x.type = 'button'; x.className = 'upd-x'; x.textContent = '×'; x.setAttribute('aria-label', 'Cerrar aviso');
+    x.onclick = function () { bar.remove(); };
+    bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(x);
+    document.body.appendChild(bar);
+  }
+  setTimeout(check, 3000);
+  setInterval(function () { if (document.visibilityState === 'visible') check(); }, 5 * 60000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+  window.fdCheckUpdate = function () { last = 0; check(); };
+})();
+</script>
 <script type="module" crossorigin>(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const a of document.querySelectorAll('link[rel="modulepreload"]'))r(a);new MutationObserver(a=>{for(const i of a)if(i.type==="childList")for(const o of i.addedNodes)o.tagName==="LINK"&&o.rel==="modulepreload"&&r(o)}).observe(document,{childList:!0,subtree:!0});function n(a){const i={};return a.integrity&&(i.integrity=a.integrity),a.referrerPolicy&&(i.referrerPolicy=a.referrerPolicy),a.crossOrigin==="use-credentials"?i.credentials="include":a.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function r(a){if(a.ep)return;a.ep=!0;const i=n(a);fetch(a.href,i)}})();var hc=typeof globalThis<"u"?globalThis:typeof window<"u"?window:typeof global<"u"?global:typeof self<"u"?self:{};function ve(e){return e&&e.__esModule&&Object.prototype.hasOwnProperty.call(e,"default")?e.default:e}var Qw={exports:{}},qA={},kw={exports:{}},ce={};/**
  * @license React
  * react.production.min.js
