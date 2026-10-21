@@ -308,36 +308,58 @@
 @keyframes updIn{from{transform:translateY(-100%)}to{transform:none}}
 </style>
 <script>
-/* Aviso de nueva versión: revisa si index.html cambió en el servidor (ETag / Last-Modified, con una petición
-   HEAD que no descarga la app) y muestra arriba una barra con el botón "Actualizar". */
+/* Actualización automática: compara la fecha de esta página (document.lastModified) con la de index.html en el
+   servidor (petición HEAD sin caché, no descarga la app). Si hay una más nueva: al abrir la app o al volver a ella
+   se recarga sola; si la estás usando, aparece arriba la barra con el botón "Actualizar". */
 (function () {
-  var url = new URL('index.html', location.href).href, base = null, last = 0, shown = false;
-  function check() {
-    if (shown || !navigator.onLine || Date.now() - last < 60000) return;
-    last = Date.now();
-    fetch(url, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
-      var tag = r.ok && (r.headers.get('etag') || r.headers.get('last-modified'));
-      if (!tag) return;
-      if (base === null) base = tag;
-      else if (tag !== base) show();
-    }).catch(function () {});
+  var url = new URL('index.html', location.href).href, TRIED = 'financial-diary:update-tried';
+  var mine = Date.parse(document.lastModified), last = 0, shown = false, etag0 = null;
+  function newer() {
+    return fetch(url, { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      if (!r.ok) return null;
+      var lm = Date.parse(r.headers.get('last-modified') || '');
+      if (lm && mine) return lm > mine + 1000 ? String(lm) : null;
+      // Sin Last-Modified: se compara contra la primera ETag vista.
+      var tag = r.headers.get('etag');
+      if (!tag) return null;
+      if (etag0 === null) { etag0 = tag; return null; }
+      return tag !== etag0 ? tag : null;
+    }).catch(function () { return null; });
   }
-  function show() {
+  function busy() { return !!document.querySelector('.overlay, .ver-overlay, [role="dialog"]'); }
+  function reload(id) {
+    try { sessionStorage.setItem(TRIED, id); } catch (e) {}
+    var go = function () { location.reload(); };
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(function (r) { return r && r.update(); }).then(go, go);
+    else go();
+  }
+  function check(auto) {
+    if (shown || !navigator.onLine || Date.now() - last < 30000) return;
+    last = Date.now();
+    newer().then(function (id) {
+      if (!id) return;
+      var tried = null; try { tried = sessionStorage.getItem(TRIED); } catch (e) {}
+      // Se recarga sola una vez por versión; si el servidor aún entrega la copia vieja, queda la barra.
+      if (auto && tried !== id && !busy()) reload(id);
+      else show(id);
+    });
+  }
+  function show(id) {
     shown = true;
     var bar = document.createElement('div'), txt = document.createElement('span'), btn = document.createElement('button'), x = document.createElement('button');
     bar.className = 'upd-bar'; bar.setAttribute('role', 'status');
     txt.textContent = 'Hay una nueva versión disponible';
     btn.type = 'button'; btn.textContent = 'Actualizar';
-    btn.onclick = function () { location.reload(); };
+    btn.onclick = function () { btn.disabled = true; btn.textContent = 'Actualizando…'; reload(id + ':manual:' + Date.now()); };
     x.type = 'button'; x.className = 'upd-x'; x.textContent = '×'; x.setAttribute('aria-label', 'Cerrar aviso');
     x.onclick = function () { bar.remove(); };
     bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(x);
     document.body.appendChild(bar);
   }
-  setTimeout(check, 3000);
-  setInterval(function () { if (document.visibilityState === 'visible') check(); }, 5 * 60000);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
-  window.fdCheckUpdate = function () { last = 0; check(); };
+  check(true);
+  setInterval(function () { if (document.visibilityState === 'visible') check(false); }, 5 * 60000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { last = 0; check(true); } });
+  window.fdCheckUpdate = function (auto) { last = 0; check(!!auto); };
 })();
 </script>
 <script type="module" crossorigin>(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const a of document.querySelectorAll('link[rel="modulepreload"]'))r(a);new MutationObserver(a=>{for(const i of a)if(i.type==="childList")for(const o of i.addedNodes)o.tagName==="LINK"&&o.rel==="modulepreload"&&r(o)}).observe(document,{childList:!0,subtree:!0});function n(a){const i={};return a.integrity&&(i.integrity=a.integrity),a.referrerPolicy&&(i.referrerPolicy=a.referrerPolicy),a.crossOrigin==="use-credentials"?i.credentials="include":a.crossOrigin==="anonymous"?i.credentials="omit":i.credentials="same-origin",i}function r(a){if(a.ep)return;a.ep=!0;const i=n(a);fetch(a.href,i)}})();var hc=typeof globalThis<"u"?globalThis:typeof window<"u"?window:typeof global<"u"?global:typeof self<"u"?self:{};function ve(e){return e&&e.__esModule&&Object.prototype.hasOwnProperty.call(e,"default")?e.default:e}var Qw={exports:{}},qA={},kw={exports:{}},ce={};/**
